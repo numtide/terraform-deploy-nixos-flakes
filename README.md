@@ -1,19 +1,11 @@
-# deploy_nixos
+# terraform-deploy-nixos-flakes
 
-A Terraform module that knows how to deploy NixOS onto a target host.
+This is a fork of https://github.com/tweag/terraform-nixos/tree/646cacb12439ca477c05315a7bfd49e9832bc4e3/deploy_nixos
 
-This allow to describe an infrastructure as code with Terraform and delegate
-the machine configuration with NixOS. All directed by Terraform.
-
-The advantage of this method is that if any of the Nix code changes, the
-difference will be detected on the next "terraform plan".
+The module was trying to do too many things at once. This one is just trying
+to deploy flakes.
 
 ## Usage
-
-Either pass a "config" which is a dynamic nixos configuration and a
-"config_pwd", or a "nixos_config", a path to a nixos configuration.nix file.
-If you have defined your NixOs configuration in a Flake, use "nixos_config" 
-to specify the name of the attribue and set "flake" to true.
 
 ### Secret handling
 
@@ -99,26 +91,7 @@ see also:
 
 ## Inputs
 
-| Name | Description | Type | Default | Required |
-|------|-------------|------|---------|:--------:|
-| NIX\_PATH | Allow to pass custom NIX\_PATH | `string` | `""` | no |
-| build\_on\_target | Avoid building on the deployer. Must be true or false. Has no effect when deploying from an incompatible system. Unlike remote builders, this does not require the deploying user to be trusted by its host. | `string` | `false` | no |
-| config | NixOS configuration to be evaluated. This argument is required unless 'nixos\_config' is given | `string` | `""` | no |
-| config\_pwd | Directory to evaluate the configuration in. This argument is required if 'config' is given | `string` | `""` | no |
-| extra\_build\_args | List of arguments to pass to the nix builder | `list(string)` | `[]` | no |
-| extra\_eval\_args | List of arguments to pass to the nix evaluation | `list(string)` | `[]` | no |
-| hermetic | Treat the provided nixos configuration as a hermetic expression and do not evaluate using the ambient system nixpkgs. Useful if you customize eval-modules or use a pinned nixpkgs. | `bool` | false | no |
-| flake | Treat the provided nixos_config as the name of the NixOS configuration to use in the flake located in the current directory. Useful if you customize eval-modules or use a pinned nixpkgs. | `bool` | false | no |
-| keys | A map of filename to content to upload as secrets in /var/keys | `map(string)` | `{}` | no |
-| nixos\_config | Path to a NixOS configuration | `string` | `""` | no |
-| ssh\_agent | Whether to use an SSH agent. True if not ssh\_private\_key is passed | `bool` | `null` | no |
-| ssh\_private\_key | Content of private key used to connect to the target\_host | `string` | `""` | no |
-| ssh\_private\_key\_file | Path to private key used to connect to the target\_host | `string` | `""` | no |
-| target\_host | DNS host to deploy to | `string` | n/a | yes |
-| target\_port | SSH port used to connect to the target\_host | `number` | `22` | no |
-| target\_system | Nix system string | `string` | `"x86_64-linux"` | no |
-| target\_user | SSH user used to connect to the target\_host | `string` | `"root"` | no |
-| triggers | Triggers for deploy | `map(string)` | `{}` | no |
+TODO: re-generate
 
 ## Outputs
 

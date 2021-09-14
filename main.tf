@@ -33,36 +33,6 @@ variable "ssh_agent" {
   default     = null
 }
 
-variable "NIX_PATH" {
-  type        = string
-  description = "Allow to pass custom NIX_PATH"
-  default     = ""
-}
-
-variable "nixos_config" {
-  type        = string
-  description = "Path to a NixOS configuration"
-  default     = ""
-}
-
-variable "config" {
-  type        = string
-  description = "NixOS configuration to be evaluated. This argument is required unless 'nixos_config' is given"
-  default     = ""
-}
-
-variable "config_pwd" {
-  type        = string
-  description = "Directory to evaluate the configuration in. This argument is required if 'config' is given"
-  default     = ""
-}
-
-variable "extra_eval_args" {
-  type        = list(string)
-  description = "List of arguments to pass to the nix evaluation"
-  default     = []
-}
-
 variable "extra_build_args" {
   type        = list(string)
   description = "List of arguments to pass to the nix builder"
@@ -70,8 +40,8 @@ variable "extra_build_args" {
 }
 
 variable "build_on_target" {
-  type        = string
-  description = "Avoid building on the deployer. Must be true or false. Has no effect when deploying from an incompatible system. Unlike remote builders, this does not require the deploying user to be trusted by its host."
+  type        = bool
+  description = "Avoid building on the deployer."
   default     = false
 }
 
@@ -87,22 +57,14 @@ variable "keys" {
   default     = {}
 }
 
-variable "target_system" {
-  type        = string
-  description = "Nix system string"
-  default     = "x86_64-linux"
-}
-
-variable "hermetic" {
-  type        = bool
-  description = "Treat the provided nixos configuration as a hermetic expression and do not evaluate using the ambient system nixpkgs. Useful if you customize eval-modules or use a pinned nixpkgs."
-  default     = false
-}
-
 variable "flake" {
-  type        = bool
-  description = "Treat the provided nixos_config as the NixOS configuration to use in the flake located in the current directory"
-  default     = false
+  type        = string
+  description = "Which flake to deploy."
+}
+
+variable "flake_host" {
+  type = string
+  description = "The flake host to instantiate."
 }
 
 variable "delete_older_than" {
@@ -115,37 +77,29 @@ variable "delete_older_than" {
 
 locals {
   triggers = {
-    deploy_nixos_drv  = data.external.nixos-instantiate.result["drv_path"]
+    deploy_nixos_drv  = data.external.nixos-instantiate.result["drvPath"]
     deploy_nixos_keys = sha256(jsonencode(var.keys))
   }
 
   extra_build_args = concat([
     "--option", "substituters", data.external.nixos-instantiate.result["substituters"],
-    "--option", "trusted-public-keys", data.external.nixos-instantiate.result["trusted-public-keys"],
+    "--option", "trusted-public-keys", data.external.nixos-instantiate.result["trustedPublicKeys"],
     ],
     var.extra_build_args,
   )
   ssh_private_key_file = var.ssh_private_key_file == "" ? "-" : var.ssh_private_key_file
   ssh_private_key      = local.ssh_private_key_file == "-" ? var.ssh_private_key : file(local.ssh_private_key_file)
   ssh_agent            = var.ssh_agent == null ? (local.ssh_private_key != "") : var.ssh_agent
-  build_on_target      = data.external.nixos-instantiate.result["currentSystem"] != var.target_system ? true : tobool(var.build_on_target)
+  build_on_target      = var.build_on_target
 }
 
 # used to detect changes in the configuration
 data "external" "nixos-instantiate" {
-  program = concat([
+  program = [
     "${path.module}/nixos-instantiate.sh",
-    var.NIX_PATH == "" ? "-" : var.NIX_PATH,
-    var.config != "" ? var.config : var.nixos_config,
-    var.config_pwd == "" ? "." : var.config_pwd,
     var.flake,
-    # end of positional arguments
-    # start of pass-through arguments
-    "--argstr", "system", var.target_system,
-    "--arg", "hermetic", var.hermetic
-    ],
-    var.extra_eval_args,
-  )
+    var.flake_host,
+  ]
 }
 
 resource "null_resource" "deploy_nixos" {
@@ -190,8 +144,8 @@ resource "null_resource" "deploy_nixos" {
   provisioner "local-exec" {
     interpreter = concat([
       "${path.module}/nixos-deploy.sh",
-      data.external.nixos-instantiate.result["drv_path"],
-      data.external.nixos-instantiate.result["out_path"],
+      data.external.nixos-instantiate.result["drvPath"],
+      data.external.nixos-instantiate.result["outPath"],
       "${var.target_user}@${var.target_host}",
       var.target_port,
       local.build_on_target,
